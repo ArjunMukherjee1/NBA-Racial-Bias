@@ -1,6 +1,4 @@
 import sys
-sys.path.append('/opt/anaconda3/lib/python3.12/site-packages')
-sys.path.append('/Users/arjunmukherjee/Library/Python/3.12/lib/python/site-packages')
 import numpy as np
 import json
 import pandas as pd
@@ -57,29 +55,13 @@ def mostCommonWords():
         words = text.split()
         words = [word for word in words if word not in stop]  # Remove stopwords
         return Counter(words)  # Count word frequencies
-
-    # Get word frequency counts
     light_word_counts = preprocess_and_count(light)
     dark_word_counts = preprocess_and_count(dark)
-
-    # Get the most common words (top 20)
     most_common_light = light_word_counts.most_common(20)
     most_common_dark = dark_word_counts.most_common(20)
-
     return most_common_light, most_common_dark
 
 def getMostWeightedAdj(model, vectorizer, top_n=20):
-    """
-    Extracts the top N highest-weighted adjectives using basic POS tagging with heuristics.
-    
-    Parameters:
-    - model: Trained logistic regression model.
-    - vectorizer: The TF-IDF vectorizer used for transforming text.
-    - top_n: Number of top adjectives to return (default is 20).
-    
-    Returns:
-    - List of tuples: (adjective, weight) sorted by weight in descending order.
-    """
     # Get feature names from the vectorizer
     feature_names = vectorizer.get_feature_names_out()
 
@@ -104,65 +86,21 @@ def getMostWeightedAdj(model, vectorizer, top_n=20):
     return top_adjectives, bottom_adjectives
 
 def getTopWords(model, vectorizer, X_train, min_freq, top_n):
-    """
-    Finds the highest and lowest weighted words that appear at least `min_freq` times.
-
-    Parameters:
-    - model: Trained logistic regression model.
-    - vectorizer: TF-IDF vectorizer used for transforming the text.
-    - X_train: Original training text data (before vectorization).
-    - min_freq: Minimum frequency a word must appear to be considered (default is 50).
-    - top_n: Number of top positive and negative words to return.
-
-    Returns:
-    - Tuple of two lists: (top_positive_words, top_negative_words)
-    """
-    # Get feature names from the vectorizer
     feature_names = vectorizer.get_feature_names_out()
-
-    # Count word frequencies in the original text
     word_counter = Counter(" ".join(X_train).split())
-
-    # Get model coefficients
     coefficients = model.coef_[0]
-
-    # Pair words with their corresponding weights
     word_weights = [(word, weight) for word, weight in zip(feature_names, coefficients) if word_counter[word] >= min_freq]
-
-    # Sort by weight: highest (positive association) and lowest (negative association)
     top_positive_words = sorted(word_weights, key=lambda x: x[1], reverse=True)[:top_n]
     top_negative_words = sorted(word_weights, key=lambda x: x[1])[:top_n]
-
     return top_positive_words, top_negative_words
 
 def get_racial_bias_keywords(model, vectorizer, keywords):
-    """
-    Finds the coefficients for specific keywords related to racial bias in the model.
-
-    Parameters:
-    - model: Trained logistic regression model.
-    - vectorizer: TF-IDF vectorizer used for transforming the text.
-    - keywords: List of keywords to check for their coefficients.
-
-    Returns:
-    - List of tuples: (keyword, coefficient) sorted by coefficient value.
-    """
-    # Get feature names (words in the vocabulary)
     feature_names = vectorizer.get_feature_names_out()
-
-    # Get model coefficients (for a binary classification, it's the weight for each word)
     coefficients = model.coef_[0]
-
-    # Pair keywords with their corresponding coefficient
     keyword_coefficients = [(word, coefficients[feature_names.tolist().index(word)] if word in feature_names else None)
                             for word in keywords]
-
-    # Filter out keywords that don't exist in the vocabulary
     keyword_coefficients = [(word, coeff) for word, coeff in keyword_coefficients if coeff is not None]
-
-    # Sort by coefficient value (positive or negative association)
     keyword_coefficients.sort(key=lambda x: x[1], reverse=True)
-
     return keyword_coefficients
 
 
@@ -188,25 +126,41 @@ print(classification_report(y_test, prediction))'''
 X_train, X_test, y_train, y_test = train_test_split(data_df['Mention'], data_df['Label'], test_size=0.20, random_state=42)
 v = TfidfVectorizer(
     stop_words='english',  # Remove common stopwords
-    max_features=5000,     # Limit to top 5000 words to prevent overfitting
+    #max_features=5000,     # Limit to top 5000 words to prevent overfitting
     ngram_range=(1, 2)     # Use unigrams and bigrams for context
 )
 train_tf = v.fit_transform(X_train)
 test_tf = v.transform(X_test)
 
+#model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train)
+# training the Naive Bayes
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
 model = LogisticRegression(solver='saga', random_state=42, C=5, penalty='l2',max_iter=1000).fit(train_tf, y_train)
-#model = RandomForestClassifier(n_estimators=10, min_samples_split=10, max_depth=10, min_samples_leaf=1, max_features='log2').fit(X_train, y_train)
+#model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train)
+#model = XGBClassifier(subsample=0.5, max_depth=24).fit(train_tf, y_train) #super long time
+#model = GradientBoostingClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2').fit(train_tf, y_train)
 
-prediction = model.predict(test_tf)
+#model = DecisionTreeClassifier(criterion='entropy', max_depth=150, min_impurity_decrease=0.000007).fit(train_tf, y_train) #improve
+
+#model = AdaBoostClassifier(n_estimators=200, random_state=42).fit(train_tf, y_train) #long time
+
+#model = MultinomialNB().fit(X_train, y_train)
+
+'''prediction = model.predict(test_tf)
 print("TRAIN: ", model.score(train_tf, y_train))
 print("TEST: ", model.score(test_tf, y_test))
+print(classification_report(y_test, prediction))
 
+from sklearn.model_selection import cross_val_score
+scores = cross_val_score(model, train_tf, y_train, cv=5)
 
-numzero = (y_test == 1).sum()
-numOne = (y_test == 0).sum()
-print(numzero, numOne)
+print("Cross-validation scores:", scores)
+print(scores.mean())
 
-'''
 feature_names = v.get_feature_names_out()
 coefficients = model.coef_[0]
 word_weights = list(zip(feature_names, coefficients))
@@ -218,12 +172,13 @@ for i in range(20):
 print()
 for i in range(20):
     print(i, top_negative[i])
-'''
 
-'''keywords = [
-    "athletic", "powerful", "natural", "gifted", "quick", "explosive", "fast", "strong", "raw talent", "dynamic",
-    "hard-working", "intelligent", "smart", "skilled", "fundamental", "coachable", "focused", "disciplined",
-    "determined", "steady", "methodical", "work ethic", "tactical", "speed", "explosiveness", "monster", "beast", "bouncy", "gritty", "hustle"
+
+keywords = [
+    "athletic", "powerful", "natural", "gifted", "quick", "explosive", "fast", "strong", "raw talent",
+    "hard-working", "intelligent", "smart", "skilled", "fundamental", "focused", "disciplined",
+    "determined", "steady", "methodical", "work ethic", "tactical", "speed", "explosiveness", "monster", "beast", "bouncy", "gritty", "hustle", "lazy", "powerhouse", "humble",
+    "scrappy"
 ]
 
 # Get the coefficients for these keywords
@@ -246,6 +201,127 @@ for word, weight in bottomWords:
     print(f"{word}: {weight:.4f}")
 #train_tf, test_tf = convertTDIF(data_df)'''
 
-#NEED TO MAKE SAME AMOUNT OF WHITE MENTIONS AS BLACK MENTIONS IN ALL DATASETS
 
+'''from transformers import BertTokenizer
+X_train_list = X_train.astype(str).tolist()
+X_test_list = X_test.astype(str).tolist()
+new_y_train = y_train.reset_index(drop=True)
+new_y_test = y_test.reset_index(drop=True)
+
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+# Tokenize text data
+train_encodings = tokenizer(X_train_list, truncation=True, padding=True, max_length=128)
+test_encodings = tokenizer(X_test_list, truncation=True, padding=True, max_length=128)
+print()
+import torch
+
+class CommentDataset(torch.utils.data.Dataset):
+    def __init__(self, encodings, labels):
+        self.encodings = encodings
+        self.labels = labels
+        print("Dataset length:", len(self.labels))
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+        item['labels'] = torch.tensor(self.labels[idx])
+        return item
+
+# Create dataset objects
+train_dataset = CommentDataset(train_encodings, new_y_train)
+test_dataset = CommentDataset(test_encodings, new_y_test)
+
+from transformers import BertForSequenceClassification
+
+import os
+MODEL_PATH = "./saved_model"
+
+if os.path.exists(MODEL_PATH):
+    print("Loading saved model...")
+    model = BertForSequenceClassification.from_pretrained(MODEL_PATH)
+    tokenizer = BertTokenizer.from_pretrained(MODEL_PATH)
+else:
+    print("No saved model found. Initializing a new model...")
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2, ignore_mismatched_sizes = True)
+
+from transformers import TrainingArguments, Trainer
+
+training_args = TrainingArguments(
+    output_dir='./results',      # Save model output here
+    num_train_epochs=3,          # Number of training epochs
+    per_device_train_batch_size=8,  
+    per_device_eval_batch_size=8,  
+    warmup_steps=500,            # Learning rate warmup
+    weight_decay=0.01,           # Regularization
+    logging_dir='./logs',        # Logging directory
+    evaluation_strategy="epoch", # Evaluate at the end of each epoch
+)
+def compute_metrics(pred):
+    labels = pred.label_ids
+    preds = np.argmax(pred.predictions, axis=1)
+    acc = accuracy_score(labels, preds)
+    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='weighted')
+    return {"accuracy": acc, "precision": precision, "recall": recall, "f1": f1}
+
+trainer = Trainer(
+    model=model, 
+    args=training_args, 
+    train_dataset=train_dataset, 
+    eval_dataset=test_dataset,
+    compute_metrics=compute_metrics
+)
+
+# Train the model
+#trainer.train()
+
+import numpy as np
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+
+# Train and save the model
+if not os.path.exists(MODEL_PATH):
+    print("Training model...")
+    trainer.train()
+    print("Saving trained model...")
+    model.save_pretrained(MODEL_PATH)
+    tokenizer.save_pretrained(MODEL_PATH)
+
+# Evaluate model
+results = trainer.evaluate()
+
+print("Evaluation Results:")
+for key, value in results.items():
+    print(f"{key}: {value:.4f}")  # Formatting to 4 decimal places
+input_lengths = [len(tokenizer.tokenize(text)) for text in X_train_list]
+print(f"Avg token length: {np.mean(input_lengths)}, Max token length: {np.max(input_lengths)}")'''
+
+
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+analyzer = SentimentIntensityAnalyzer()
+def get_sentiment(text):
+    scores = analyzer.polarity_scores(text)
+    return scores['compound']  # Compound score: -1 (most negative) to +1 (most positive)
+data_df['Sentiment'] = data_df['Mention'].apply(get_sentiment)
+
+#Compute average sentiment by race
+sentiment_summary = data_df.groupby('Skin Tone')['Sentiment'].mean().reset_index()
+print(sentiment_summary)
+print(2*(sentiment_summary['Sentiment'][1] - sentiment_summary['Sentiment'][0])/(sentiment_summary['Sentiment'][1] + sentiment_summary['Sentiment'][0]))
+from scipy import stats
+dark_skin_sentiment = data_df[data_df['Skin Tone'] == 'D']['Sentiment']
+light_skin_sentiment = data_df[data_df['Skin Tone'] == 'L']['Sentiment']
+t_stat, p_value = stats.ttest_ind(dark_skin_sentiment, light_skin_sentiment)
+print(f"T-statistic: {t_stat}, P-value: {p_value}")
+
+#histogram
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.histplot(data=data_df, x='Sentiment', hue='Skin Tone', kde=True, bins=20, multiple="dodge")
+plt.title("Sentiment Distribution by Player Race")
+plt.xlabel("Sentiment Score")
+plt.ylabel("Count")
+plt.legend(title="Skin Tone", labels=["Lighter", "Darker"])
+plt.show()
 
