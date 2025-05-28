@@ -132,7 +132,7 @@ v = TfidfVectorizer(
 train_tf = v.fit_transform(X_train)
 test_tf = v.transform(X_test)
 
-#model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train)
+model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train)
 # training the Naive Bayes
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
@@ -150,7 +150,7 @@ model = LogisticRegression(solver='saga', random_state=42, C=5, penalty='l2',max
 
 #model = MultinomialNB().fit(X_train, y_train)
 
-'''prediction = model.predict(test_tf)
+prediction = model.predict(test_tf)
 print("TRAIN: ", model.score(train_tf, y_train))
 print("TEST: ", model.score(test_tf, y_test))
 print(classification_report(y_test, prediction))
@@ -160,7 +160,7 @@ scores = cross_val_score(model, train_tf, y_train, cv=5)
 
 print("Cross-validation scores:", scores)
 print(scores.mean())
-
+'''
 feature_names = v.get_feature_names_out()
 coefficients = model.coef_[0]
 word_weights = list(zip(feature_names, coefficients))
@@ -307,7 +307,7 @@ data_df['Sentiment'] = data_df['Mention'].apply(get_sentiment)
 #Compute average sentiment by race
 sentiment_summary = data_df.groupby('Skin Tone')['Sentiment'].mean().reset_index()
 print(sentiment_summary)
-print(2*(sentiment_summary['Sentiment'][1] - sentiment_summary['Sentiment'][0])/(sentiment_summary['Sentiment'][1] + sentiment_summary['Sentiment'][0]))
+#print(2*(sentiment_summary['Sentiment'][1] - sentiment_summary['Sentiment'][0])/(sentiment_summary['Sentiment'][1] + sentiment_summary['Sentiment'][0]))
 from scipy import stats
 dark_skin_sentiment = data_df[data_df['Skin Tone'] == 'D']['Sentiment']
 light_skin_sentiment = data_df[data_df['Skin Tone'] == 'L']['Sentiment']
