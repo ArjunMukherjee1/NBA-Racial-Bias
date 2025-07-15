@@ -1,6 +1,3 @@
-import sys
-sys.path.append('/opt/anaconda3/lib/python3.12/site-packages')
-sys.path.append('/Users/arjunmukherjee/Library/Python/3.12/lib/python/site-packages')
 import numpy as np
 import json
 import pandas as pd
@@ -23,14 +20,13 @@ from sklearn.ensemble import RandomForestClassifier
 
 with open("train_data_15.json", "r") as file:
     data = json.load(file)
-print("LENGTH")
-print(len(data))
 def load_stopwords(filepath):
     with open(filepath, 'r', encoding='utf-8') as file:
         stopwords_list = file.read().splitlines()  # Read and split into a list
     return set(stopwords_list)
 stop = load_stopwords("stopwords.txt")
 
+#Creates a balanced Dataframe from the loaded JSON data
 def createDF():
     df_list = []
     for i in range(len(data)):
@@ -42,15 +38,19 @@ def createDF():
         player_info.append(label['Year'])
         player_info.append(data[i]['Mention'])
         df_list.append(player_info)
+
     data_df =  pd.DataFrame(df_list, columns = ['Name', 'Skin Tone', 'Teams', 'Year', 'Mention']) 
+
+    #Darker-skiinned players labeled as 1, lighter-skinned as 0
     data_df['Label'] = data_df['Skin Tone'].map({'D':1, 'L':0})
     numLight = sum(data_df['Skin Tone'] == 'L')
     #print(sum(data_df['Skin Tone'] == 'L'), sum(data_df['Skin Tone'] == 'D'))
+
+    #Removes mentions of darker-skinned players to make the dataset balanced
     data_df = data_df.groupby('Skin Tone').apply(pd.DataFrame.sample, n=numLight).reset_index(drop=True)
-    #some skin tone is not "d" or "l"
     return data_df
 
-
+#identifies most common words in the mentions of both groups
 def mostCommonWords():
     limit = 8740
     light = ' '.join(data_df[data_df['Skin Tone'] == 'L']['Mention'].str.lower().values[:limit])
@@ -66,30 +66,24 @@ def mostCommonWords():
     most_common_dark = dark_word_counts.most_common(20)
     return most_common_light, most_common_dark
 
+#Finds highest weighted adjectives
 def getMostWeightedAdj(model, vectorizer, top_n=20):
-    # Get feature names from the vectorizer
     feature_names = vectorizer.get_feature_names_out()
-
-    # Tokenize and apply POS tagging (assuming tagging works without downloads)
     tagged_words = pos_tag(feature_names)
 
-    # Filter for adjectives based on POS tags (JJ = adjective, JJR = comparative, JJS = superlative)
+    #Filters for adjectives based on tags (JJ = adjective, JJR = comparative, JJS = superlative)
     adjectives = [word for word, tag in tagged_words if tag in ['JJ', 'JJR', 'JJS']]
-
-    # Get model coefficients
+    
     coefficients = model.coef_[0]
-
-    # Pair words with their corresponding weights
     word_weights = list(zip(feature_names, coefficients))
 
-    # Filter for adjectives only
+    #Gets a list of only adjectives
     adj_weights = [(word, weight) for word, weight in word_weights if word in adjectives]
-
-    # Sort adjectives by weight in descending order and return the top N
     top_adjectives = sorted(adj_weights, key=lambda x: x[1], reverse=True)[:top_n]
     bottom_adjectives = sorted(adj_weights, key=lambda x: x[1])[:top_n]
     return top_adjectives, bottom_adjectives
 
+#Finds the highest weighted words both positive and negative
 def getTopWords(model, vectorizer, X_train, min_freq, top_n):
     feature_names = vectorizer.get_feature_names_out()
     word_counter = Counter(" ".join(X_train).split())
@@ -99,6 +93,7 @@ def getTopWords(model, vectorizer, X_train, min_freq, top_n):
     top_negative_words = sorted(word_weights, key=lambda x: x[1])[:top_n]
     return top_positive_words, top_negative_words
 
+#Returns sorted list of words and their corresponding weights for every word in the list "keywords"
 def get_racial_bias_keywords(model, vectorizer, keywords):
     feature_names = vectorizer.get_feature_names_out()
     coefficients = model.coef_[0]
@@ -108,46 +103,34 @@ def get_racial_bias_keywords(model, vectorizer, keywords):
     keyword_coefficients.sort(key=lambda x: x[1], reverse=True)
     return keyword_coefficients
 
-
+#Create dataframe
 data_df = createDF()
-print(len(data_df))
-'''from sklearn.feature_extraction.text import CountVectorizer
 
-count_vect = CountVectorizer()
-counts = count_vect.fit_transform(data_df['Mention'])
-
-from sklearn.feature_extraction.text import TfidfTransformer
-
-transformer = TfidfTransformer().fit(counts)
-
-counts_tfidf = transformer.transform(counts)
-
-X_train, X_test, y_train, y_test = train_test_split(counts_tfidf, data_df['Label'], test_size=0.20, random_state=42)
-model = LogisticRegression(solver='saga', random_state=42, C=5, penalty='l2',max_iter=1000).fit(X_train, y_train)
-prediction = model.predict(X_test)
-print("TRAIN: ", model.score(X_train, y_train))
-print("TEST: ", model.score(X_test, y_test))
-print(classification_report(y_test, prediction))'''
-
+#Separate data for training and testing
 X_train, X_test, y_train, y_test = train_test_split(data_df['Mention'], data_df['Label'], test_size=0.20, random_state=42)
+
+#Convert mentions to a matrix of TF-IDF 
 v = TfidfVectorizer(
-    stop_words='english',  # Remove common stopwords
-    #max_features=5000,     # Limit to top 5000 words to prevent overfitting
-    ngram_range=(1, 2)     # Use unigrams and bigrams for context
+    stop_words='english',  
+    #max_features=5000,
+    ngram_range=(1, 2)     #Use terms of 1 or 2 words
 )
 train_tf = v.fit_transform(X_train)
 test_tf = v.transform(X_test)
 
-#model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train)
-# training the Naive Bayes
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
-model = LogisticRegression(solver='saga', random_state=42, C=5, penalty='l2',max_iter=1000).fit(train_tf, y_train)
-#model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train)
+
+#Train models
+model = LogisticRegression(solver='saga', random_state=42, C=5, penalty='l2',max_iter=1000).fit(train_tf, y_train) #Top performance
+
+#model = RandomForestClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2', class_weight='balanced').fit(train_tf, y_train) #2nd best performance
+
 #model = XGBClassifier(subsample=0.5, max_depth=24).fit(train_tf, y_train) #super long time
+
 #model = GradientBoostingClassifier(n_estimators=200, min_samples_split=2, max_depth=20, min_samples_leaf=1, max_features='log2').fit(train_tf, y_train)
 
 #model = DecisionTreeClassifier(criterion='entropy', max_depth=150, min_impurity_decrease=0.000007).fit(train_tf, y_train) #improve
@@ -156,12 +139,14 @@ model = LogisticRegression(solver='saga', random_state=42, C=5, penalty='l2',max
 
 #model = MultinomialNB().fit(X_train, y_train)
 
+#Test model
 prediction = model.predict(test_tf)
 print("TRAIN: ", model.score(train_tf, y_train))
 print("TEST: ", model.score(test_tf, y_test))
 print(classification_report(y_test, prediction))
 
 from sklearn.model_selection import cross_val_score
+#Cross validation scores
 #scores = cross_val_score(model, train_tf, y_train, cv=5)
 
 #print("Cross-validation scores:", scores)
@@ -171,20 +156,17 @@ from sklearn.model_selection import cross_val_score
 #top_adjs, bottom_adjs = getMostWeightedAdj(model, v, top_n=20)
 
 
-#print("Top weighted adjectives for darker-skinned players (positive class):")
+#print("Top weighted adjectives for darker-skinned players:")
 #for word, weight in top_adjs:
 #    print(f"{word}: {weight:.3f}")
 
-
+#Confusion Matrix
 '''from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-# Assuming y_test and prediction are already defined:
 cm = confusion_matrix(y_test, prediction, labels=[0,1])
-disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-                              display_labels=['Lighter','Darker'])
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Lighter','Darker'])
 
-# Plot it
 fig, ax = plt.subplots(figsize=(5,5))
 disp.plot(ax=ax)
 plt.title("Confusion Matrix")
@@ -203,20 +185,21 @@ word_weights = list(zip(feature_names, coefficients))
 #for i in range(250):
     #print(i, top_negative[i])
 
+#Racial bias keywords
 keywords = [
-    # Work Ethic and Character
+    #Work Ethic and Character
     "hardworking", "scrappy", "gritty", "hustle", 
     "grinder", "overachiever", "hard-working", 
     "work ethic", "determined", "focused", 
     "steady", "hustling",
 
-    # Intelligence
+    #Intelligence
     "smart", "cerebral", "high IQ", "basketball IQ", "coachable", 
     "heady", "instinctual", "disciplined", "savvy", "methodical", 
     "polished", "intelligent", "tactical", "poised", "strategic", 
     "aware", "intuitive", "IQ",
 
-    # Athleticism
+    #Athleticism
     "athletic", "freakish", "bouncy", "strong", 
     "fast", "raw talent", "gifted", "quick", 
     "powerful", "natural", "speed", "explosiveness", 
@@ -224,19 +207,19 @@ keywords = [
     "high flyer", "muscular", "muscle", "powerhouse", 
     "long", "machine",
 
-    # Temperment
+    #Temperment
     "aggressive", "emotional", "hot-headed", "fiery", 
     "passionate", "intense", "volatile", "lazy", "bully",
 
-    # Leadership
+    #Leadership
     "leader", "captain", "vocal", "mature", "professional", 
     "role model", "humble", "grounded", "arrogant", "soldier",
 
-    # Skill or Creativity
+    #Skill or Creativity
     "flashy", "finesse", "creative", "unpredictable", "streetball", 
     "fundamental", "textbook", "wild", "skilled",
 
-    # Other
+    #Other
     "thug", "urban", "articulate", 
     "intimidating", "selfish", "greedy", "me-first", 
     "unfortunate", "afraid", "trouble", "smart play", 
@@ -244,10 +227,8 @@ keywords = [
     "perserve", "unbelievable", "spectacular", 
     "unstoppable", "beauty", "unlucky"
 ]
-# Get the coefficients for these keywords
 bias_keywords = get_racial_bias_keywords(model, v, keywords)
 
-# Print the coefficients and sort them by strength of association
 print("Keywords and their coefficients:")
 for word, coeff in bias_keywords:
     print(f"{word}: {coeff:.4f}")
@@ -266,6 +247,7 @@ for word, weight in bottomWords:
 
 
 '''from transformers import BertTokenizer
+#Converts mentions into lists of strings and resets indices of the skin color label to match
 X_train_list = X_train.astype(str).tolist()
 X_test_list = X_test.astype(str).tolist()
 new_y_train = y_train.reset_index(drop=True)
@@ -273,17 +255,16 @@ new_y_test = y_test.reset_index(drop=True)
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-# Tokenize text data
+#Tokenize text data
 train_encodings = tokenizer(X_train_list, truncation=True, padding=True, max_length=128)
 test_encodings = tokenizer(X_test_list, truncation=True, padding=True, max_length=128)
-print()
 import torch
 
 class CommentDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
         self.encodings = encodings
         self.labels = labels
-        print("Dataset length:", len(self.labels))
+        #print("Dataset length:", len(self.labels))
     def __len__(self):
         return len(self.labels)
 
@@ -299,27 +280,27 @@ test_dataset = CommentDataset(test_encodings, new_y_test)
 from transformers import BertForSequenceClassification
 
 import os
-MODEL_PATH = "./saved_model"
+MODEL_PATH = "./results"
 
 if os.path.exists(MODEL_PATH):
-    print("Loading saved model...")
+    print("Loading saved model")
     model = BertForSequenceClassification.from_pretrained(MODEL_PATH)
     tokenizer = BertTokenizer.from_pretrained(MODEL_PATH)
 else:
-    print("No saved model found. Initializing a new model...")
+    print("No saved model found. Initializing a new model")
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2, ignore_mismatched_sizes = True)
 
 from transformers import TrainingArguments, Trainer
 
 training_args = TrainingArguments(
-    output_dir='./results',      # Save model output here
-    num_train_epochs=3,          # Number of training epochs
+    output_dir='./results',      
+    num_train_epochs=3,
     per_device_train_batch_size=8,  
     per_device_eval_batch_size=8,  
-    warmup_steps=500,            # Learning rate warmup
-    weight_decay=0.01,           # Regularization
-    logging_dir='./logs',        # Logging directory
-    evaluation_strategy="epoch", # Evaluate at the end of each epoch
+    warmup_steps=500,
+    weight_decay=0.01,
+    logging_dir='./logs',
+    evaluation_strategy="epoch",
 )
 def compute_metrics(pred):
     labels = pred.label_ids
@@ -336,8 +317,8 @@ trainer = Trainer(
     compute_metrics=compute_metrics
 )
 
-# Train the model
-#trainer.train()
+
+trainer.train()
 
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
@@ -360,17 +341,17 @@ input_lengths = [len(tokenizer.tokenize(text)) for text in X_train_list]
 print(f"Avg token length: {np.mean(input_lengths)}, Max token length: {np.max(input_lengths)}")'''
 
 
-'''from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 analyzer = SentimentIntensityAnalyzer()
+
 def get_sentiment(text):
     scores = analyzer.polarity_scores(text)
-    return scores['compound']  # Compound score: -1 (most negative) to +1 (most positive)
+    return scores['compound']  # Compound score: ranges from -1 to 1
 data_df['Sentiment'] = data_df['Mention'].apply(get_sentiment)
 
 #Compute average sentiment by race
 sentiment_summary = data_df.groupby('Skin Tone')['Sentiment'].mean().reset_index()
 print(sentiment_summary)
-#print(2*(sentiment_summary['Sentiment'][1] - sentiment_summary['Sentiment'][0])/(sentiment_summary['Sentiment'][1] + sentiment_summary['Sentiment'][0]))
 from scipy import stats
 dark_skin_sentiment = data_df[data_df['Skin Tone'] == 'D']['Sentiment']
 light_skin_sentiment = data_df[data_df['Skin Tone'] == 'L']['Sentiment']
@@ -387,6 +368,6 @@ plt.xlabel("Sentiment Score")
 plt.ylabel("Count")
 plt.legend(title="Skin Tone", labels=["Lighter", "Darker"])
 plt.show()
-'''
+
 
 
