@@ -2,7 +2,6 @@ import numpy as np
 import json
 import pandas as pd
 import nltk
-nltk.download('averaged_perceptron_tagger_eng')
 from nltk import pos_tag, word_tokenize
 
 
