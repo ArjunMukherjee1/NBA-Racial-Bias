@@ -5,12 +5,18 @@ Created on Sun Aug 25 21:52:19 2024
 
 @author: arjunmukherjee
 '''
+
 from nltk.tokenize import word_tokenize
+
 import json
 import re
 import os
 from collections import Counter
-with open("ASI Data/NBA_Rosters.json", "r") as file:
+
+#import nltk
+#nltk.download('punkt_tab')
+
+with open("Data/NBA_Rosters.json", "r") as file:
     rosters = json.load(file)
 
 players = []
@@ -206,8 +212,8 @@ def findMentions(players, window_len, teams, year):
             
 
 
-def collectAllTranscripts():
-    folder_path = "ASI Data/Transcripts/"
+def collectAllTranscripts(window_length):
+    folder_path = "Data/Transcripts/"
 
     pattern = r"(\d+:\d+:\d+) - (\w+) vs (\w+).txt"
     for file_name in os.listdir(folder_path):
@@ -217,109 +223,11 @@ def collectAllTranscripts():
             year = int(date.split(":")[-1]) + 2000  #Converts "25" to "2025"
             file_path = os.path.join(folder_path, file_name)
             readFile(file_path, team1, team2, year)
-            findMentions(players, 5, teams, year)
+            findMentions(players, window_length, teams, year)
 
-collectAllTranscripts()
+collectAllTranscripts(10)
 
 
-output_file = "train_data_5.json"
+output_file = "Data/train_data_10.json"
 with open(output_file, "w") as json_file:
     json.dump(all_mentions, json_file, indent=4)
-
-'''
-for i in range(len(tokens)):
-    for p in players:
-        full_name = p.lower()
-        split = full_name.split()
-        first = split[0]
-        last = split[1]
-        if((tokens[i] == first and tokens[i+1] == last)):
-            start = max(0, i- window_len)
-            before = " ".join(tokens[start:i])
-            end = min(i+window_len + 2, len(tokens))
-            after = " ".join(tokens[i+2:end])
-            mention = before + " <player> " +after
-            mentions.append(mention)
-        elif(tokens[i] == first):
-            start = max(0, i- window_len)
-            before = " ".join(tokens[start:i])
-            end = min(i+window_len + 1, len(tokens))
-            after = " ".join(tokens[i+1:end])
-            mention = before + " <player> " +after
-            mentions.append(mention)
-        elif(tokens[i] == last and tokens[i-1] != first):
-            start = max(0, i- window_len)
-            before = " ".join(tokens[start:i])
-            end = min(i+window_len + 1, len(tokens))
-            after = " ".join(tokens[i+1:end])
-            mention = before + " <player> " + after
-            mentions.append(mention)
-print(mentions)
-
-if((tokens[i] == first and tokens[i+1] == last)):
-                start = max(0, i- window_len)
-                before = " ".join(tokens[start:i])
-                end = min(i+window_len + 2, len(tokens))
-                after = " ".join(tokens[i+2:end])
-                context = before + " <player> " +after
-                label = {"Player": full_name, "Skin Tone": players[p]["Skin Tone"], "Teams": teams, "Year": year}
-                mention = {"Label" : label, "Mention": context}
-                all_mentions.append(mention)
-            elif(tokens[i] == first):
-                start = max(0, i- window_len)
-                before = " ".join(tokens[start:i])
-                end = min(i+window_len + 1, len(tokens))
-                after = " ".join(tokens[i+1:end])
-                context = before + " <player> " +after
-                label = {"Player": full_name, "Skin Tone": players[p]["Skin Tone"], "Teams": teams, "Year": year}
-                mention = {"Label" : label, "Mention": context}
-                all_mentions.append(mention)
-            elif(tokens[i] == last and tokens[i-1] != first):
-                start = max(0, i- window_len)
-                before = " ".join(tokens[start:i])
-                end = min(i+window_len + 1, len(tokens))
-                after = " ".join(tokens[i+1:end])
-                context = before + " <player> " +after
-                label = {"Player": full_name, "Skin Tone": players[p]["Skin Tone"], "Teams": teams, "Year": year}
-                mention = {"Label" : label, "Mention": context}
-                all_mentions.append(mention)
-                    
-    readFile("ASI Data/NBA_Transcripts/1:13:25 - Lakers vs Spurs.txt", "Spurs", "Lakers", 2025)
-    findMentions(players, 5, teams, year)
-    readFile("ASI Data/NBA_Transcripts/1:2:24 - Warriors vs 76ers.txt", "Warriors", "76ers", 2024)
-    findMentions(players, 5, teams, year)
-    readFile("ASI Data/NBA_Transcripts/1:2:25 - Lakers vs Blazers.txt", "Lakers", "Blazers", 2025)
-    findMentions(players, 5, teams, year)
-    readFile("ASI Data/NBA_Transcripts/1:3:25 - Knicks vs Thunder.txt", "Knicks", "Thunder", 2025)
-    findMentions(players, 5, teams, year)
-    readFile("ASI Data/NBA_Transcripts/1:3:25 - Rockets vs Celtics.txt", "Rockets", "Celtics", 2025)
-    findMentions(players, 5, teams, year)
-    readFile("ASI Data/NBA_Transcripts/1:7:25 - Lakers vs Mavericks.txt", "Lakers", "Mavericks", 2025)
-    findMentions(players, 5, teams, year)
-    readFile("ASI Data/NBA_Transcripts/1:7:25 - Lakers vs Mavericks.txt", "Lakers", "Mavericks", 2025)
-    findMentions(players, 5, teams, year)
-
-    "could n't": "could not",
-        "are n't": "are not",
-        "did n't": "did not",
-        "does n't": "does not",
-        "had n't": "had not",
-        "i 'm": "i am",
-        "it 'll": "it will",
-        "it 's": "it is",
-        "let 's": "let us",
-        "here's": "here is",
-        "that 's": "that is",
-        "he 's": "he is",
-        "you 're": "you are",
-        "do n't": "do not",
-        "he 'll": "he will",
-        "has n't": "has not",
-        "there 's": "there is",
-        "was n't": "was not",
-        "ca n't": "can not",
-        "is n't": "is not",
-        "wo n't": "will not"
-'''
-
-

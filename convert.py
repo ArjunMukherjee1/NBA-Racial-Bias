@@ -16,7 +16,7 @@ with open("ASI Data/NBA_Rosters.json", "w") as f:
     json.dump(result, f, indent=4)'''
 
 
-df = pd.read_csv("ASI Data/NBA_rosters.csv")
+df = pd.read_csv("Data/NBA_rosters.csv")
 
 #Create separate instances for people with multiple teams
 df["Team"] = df["Team"].str.split("/")
@@ -36,7 +36,7 @@ for _, row in df.iterrows():
     teams_dict[team][player] = {"Skin Tone": skin_tone}
 
 #Save the dictionary to a JSON file
-with open("ASI Data/NBA_Rosters.json", "w") as f:
+with open("Data/NBA_Rosters.json", "w") as f:
     json.dump(teams_dict, f, indent=4)
 
 

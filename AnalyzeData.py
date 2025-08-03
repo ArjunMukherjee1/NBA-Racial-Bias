@@ -21,7 +21,7 @@ with open("train_data_15.json", "r") as file:
     data = json.load(file)
 def load_stopwords(filepath):
     with open(filepath, 'r', encoding='utf-8') as file:
-        stopwords_list = file.read().splitlines()  # Read and split into a list
+        stopwords_list = file.read().splitlines()
     return set(stopwords_list)
 stop = load_stopwords("stopwords.txt")
 
@@ -57,8 +57,8 @@ def mostCommonWords():
 
     def preprocess_and_count(text):
         words = text.split()
-        words = [word for word in words if word not in stop]  # Remove stopwords
-        return Counter(words)  # Count word frequencies
+        words = [word for word in words if word not in stop]  #Remove stopwords
+        return Counter(words)
     light_word_counts = preprocess_and_count(light)
     dark_word_counts = preprocess_and_count(dark)
     most_common_light = light_word_counts.most_common(20)
@@ -272,7 +272,7 @@ class CommentDataset(torch.utils.data.Dataset):
         item['labels'] = torch.tensor(self.labels[idx])
         return item
 
-# Create dataset objects
+#Create dataset objects
 train_dataset = CommentDataset(train_encodings, new_y_train)
 test_dataset = CommentDataset(test_encodings, new_y_test)
 
@@ -322,7 +322,7 @@ trainer.train()
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-# Train and save the model
+#Train and save the model
 if not os.path.exists(MODEL_PATH):
     print("Training model...")
     trainer.train()
@@ -330,12 +330,11 @@ if not os.path.exists(MODEL_PATH):
     model.save_pretrained(MODEL_PATH)
     tokenizer.save_pretrained(MODEL_PATH)
 
-# Evaluate model
 results = trainer.evaluate()
 
 print("Evaluation Results:")
 for key, value in results.items():
-    print(f"{key}: {value:.4f}")  # Formatting to 4 decimal places
+    print(f"{key}: {value:.4f}")
 input_lengths = [len(tokenizer.tokenize(text)) for text in X_train_list]
 print(f"Avg token length: {np.mean(input_lengths)}, Max token length: {np.max(input_lengths)}")'''
 
@@ -345,7 +344,7 @@ analyzer = SentimentIntensityAnalyzer()
 
 def get_sentiment(text):
     scores = analyzer.polarity_scores(text)
-    return scores['compound']  # Compound score: ranges from -1 to 1
+    return scores['compound']  #Ranges from -1 to 1
 data_df['Sentiment'] = data_df['Mention'].apply(get_sentiment)
 
 #Compute average sentiment by race
@@ -355,7 +354,7 @@ from scipy import stats
 dark_skin_sentiment = data_df[data_df['Skin Tone'] == 'D']['Sentiment']
 light_skin_sentiment = data_df[data_df['Skin Tone'] == 'L']['Sentiment']
 t_stat, p_value = stats.ttest_ind(dark_skin_sentiment, light_skin_sentiment)
-print(f"T-statistic: {t_stat}, P-value: {p_value}")
+#print(f"T-statistic: {t_stat}, P-value: {p_value}")
 
 #histogram
 import matplotlib.pyplot as plt
