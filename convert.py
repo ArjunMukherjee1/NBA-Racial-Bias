@@ -14,16 +14,16 @@ result = df.groupby("Team").apply(
 # Save to JSON
 with open("ASI Data/NBA_Rosters.json", "w") as f:
     json.dump(result, f, indent=4)'''
-# Load the CSV file
+
+
 df = pd.read_csv("ASI Data/NBA_rosters.csv")
 
-# If any player belongs to multiple teams (e.g., "76ers/Clippers"),
-# split the 'Team' column on "/" and create separate rows
+#Create separate instances for people with multiple teams
 df["Team"] = df["Team"].str.split("/")
 df = df.explode("Team")
-df["Team"] = df["Team"].str.strip()  # Clean any extra whitespace
+df["Team"] = df["Team"].str.strip()
 
-# Create a dictionary with teams as keys and nested dictionaries for players
+#Create a dictionary with teams as keys and nested dictionaries for players
 teams_dict = {}
 for _, row in df.iterrows():
     team = row["Team"]
@@ -35,7 +35,7 @@ for _, row in df.iterrows():
     
     teams_dict[team][player] = {"Skin Tone": skin_tone}
 
-# Save the dictionary to a JSON file with pretty formatting
+#Save the dictionary to a JSON file
 with open("ASI Data/NBA_Rosters.json", "w") as f:
     json.dump(teams_dict, f, indent=4)
 

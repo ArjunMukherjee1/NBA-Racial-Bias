@@ -5,14 +5,12 @@ Created on Sun Aug 25 21:52:19 2024
 
 @author: arjunmukherjee
 '''
-import sys
-sys.path.append('/Users/arjunmukherjee/Library/Python/3.12/lib/python/site-packages')
 from nltk.tokenize import word_tokenize
 import json
 import re
 import os
 from collections import Counter
-with open("ASI Data/NBA_rosters.json", "r") as file:
+with open("ASI Data/NBA_Rosters.json", "r") as file:
     rosters = json.load(file)
 
 players = []
@@ -72,33 +70,29 @@ def checkNameOverlap(players):
     duplicates = [item for item, count in count.items() if count > 1]
     print(duplicates)
 
-# Function to replace names in the context that belong to other players.
+#Replaces other names in the mention with <teamate> or <oponent>
 def replaceOtherPlayerNames(context, current_player, all_player_names, teams):
-    # Extract the variants for the current player (we don't want to replace these).
     current_variants = extract_name_variants(current_player)
 
     if current_player in [k.lower() for k in rosters[teams[0]].keys()]:
         current_team, opponent_team = teams[0], teams[1]
     else:
         current_team, opponent_team = teams[1], teams[0]
-    # Loop over all players in the dataset
+
     for player in all_player_names:
         player_lower = player.lower()
 
-        # Skip replacing the current player's own mentions (already replaced separately)
+        #Replaces the player mentioned's name
         for variant in current_variants:
-            # Use a regex to find whole-word matches of the variant.
-            # This prevents accidental replacement of substrings.
             pattern = r'\b' + re.escape(variant) + r'\b'
-            # Replace the matched variant with the placeholder "player".
             context = re.sub(pattern, '<mentioned_player>', context)
-        # Generate name variants for the other player
+        
         player_variants = extract_name_variants(player_lower)
 
+        #Replaces other players names
         for variant in player_variants:
             pattern = r'\b' + re.escape(variant) + r'\b'
 
-            # Determine if the player is a teammate or an opponent
             if player in rosters[current_team]:
                 replacement = '<teammate>'
             elif player in rosters[opponent_team]:
@@ -213,33 +207,22 @@ def findMentions(players, window_len, teams, year):
 
 
 def collectAllTranscripts():
-    folder_path = "ASI Data/Train/"
+    folder_path = "ASI Data/Transcripts/"
 
-    # Regular expression pattern to extract teams and year from filenames
     pattern = r"(\d+:\d+:\d+) - (\w+) vs (\w+).txt"
-
-    # Loop through each file in the folder
-    #count = 0
     for file_name in os.listdir(folder_path):
         match = re.match(pattern, file_name)
         if match:
             date, team1, team2 = match.groups()
-            #count +=1
-            year = int(date.split(":")[-1]) + 2000  # Converts "25" to "2025"
-
-            # Construct the full file path
+            year = int(date.split(":")[-1]) + 2000  #Converts "25" to "2025"
             file_path = os.path.join(folder_path, file_name)
-            #print(file_path, team1, team2, year)
-            # Process the file
             readFile(file_path, team1, team2, year)
             findMentions(players, 5, teams, year)
+
 collectAllTranscripts()
 
-#readFile("newTranscript.txt", "Suns", "Grizzlies", 2024)
-#findMentions(players, 5, teams, year)
 
 output_file = "train_data_5.json"
-# Write the dictionary to a JSON file
 with open(output_file, "w") as json_file:
     json.dump(all_mentions, json_file, indent=4)
 
