@@ -1,20 +1,33 @@
-# NBA-Racial-Bias
+# Elevator Simulation
 
-The language that sports commentators use has a major impact on the perception of athletes.
-Prior social science research shows that live sports commentary often contains racial bias.
-However, many of these studies were predicated on manual categorizations of statements and
-small sets of data. This study investigated racial bias in basketball commentary by using
-computational techniques to analyze a large sample of data. Transcripts of NBA games from
-2023-2025 were processed to create a dataset of over 20,000 player mentions tagged with the
-player’s skin tone (lighter-skinned or darker-skinned). The data was analyzed using two
-approaches: sentiment analysis and machine learning classification. The results of sentiment
-analysis showed that mentions describing darker-skinned players and lighter-skinned players
-were very similar in tone. Conversely, a logistic regression model was able to predict a player’s
-skin tone from a mention with an accuracy of 60%, signifying that there were marginal
-differences in the ways commentators discussed players of different races. Inspection of the
-model’s coefficients found that terms related to athleticism (e.g., athletic, speed) were associated
-with darker-skinned players while words related to character and intellect (e.g., smart, mature)
-were linked to lighter-skinned players. This disparity in speech promotes harmful stereotypes
-about race, physicality and cognitive ability in sports.
+A tick-based elevator simulator coded in Java. It is built around a finite state machine with 7 states and a call prioritization scheduler. The repository also includes JavaFX visualization of the elevator's actions and 89 comprehensive JUnit 5 tests that validate 70+ scenarios.
 
-This repository contains all code and data used for this project.
+*This was the capstone project for Advanced Data Structures and Embedded Systems.*
+
+## Features
+
+- State machine: `STOP → MVTOFLR → OPENDR → OFFLD → BOARD → CLOSEDR → MV1FLR`, decided every tick.
+- Smart scheduling: chooses calls by demand above and below the car and by distance and reverses direction only when nothing is left ahead, just like a real elevator.
+- Realistic passengers: Incorporates capacity limits and skips. Passengers give up when they've had to wait for too long. Certain riders hold closing doors open to let others in while others don't.
+- Configurable timing: floor travel, door speed and boarding rate are all set in ticks.
+- Analytics: a full event log plus per-passenger wait and trip times are exported to a csv file.
+
+## Structure
+
+```
+src/building/      Building (state machine engine), Elevator, CallManager, Floor
+src/passengers/    Passenger group model
+src/genericqueue/  Generic bounded queue
+src/               Controller, JavaFX GUI, JUnit test suites
+test_data/         Scenario CSVs for testing
+```
+
+The code is split MVC-style. The JavaFX GUI is the view, `ElevatorSimController` runs the tick loop, and `Building` is the model.
+
+## Running
+
+It requires Java, JavaFX, JUnit 5 and `library/cmpElevator.jar` on the classpath.
+
+1. Set the building parameters in `ElevatorSimConfig.csv` (floors, capacity, timing, passenger file).
+2. Launch `ElevatorSimulation`, then use Run or Step.
+3. Run the `BuildingFSM*Test` suites. They check the simulator's logs against reference logs.
