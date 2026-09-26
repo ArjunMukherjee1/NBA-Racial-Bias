@@ -17,8 +17,6 @@ with darker-skinned players while words related to character and intellect (e.g.
 were linked to lighter-skinned players. This disparity in speech promotes harmful stereotypes
 about race, physicality and cognitive ability in sports. However, humans – regardless of ethnicity
 - harbor ethnocentric biases which, in this study, were detected by ML models as being
-marginally greater (~ 60% accuracy) than chance alone would dictate. Therefore, there is a
-significant risk of incorrectly attributing these universal human traits with deliberate malice and
-resentment against other ethnic groups or races; especially in the absence of any sentiment bias.
+marginally greater (~ 60% accuracy) than chance alone would dictate.
 
 This repository contains all code and data used for this project.
